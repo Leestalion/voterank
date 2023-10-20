@@ -2,7 +2,7 @@
 
 <template >
   <div class="flex justify-center w-screen h-screen">
-    <div class="overflow-hidden flex flex-col justify-center ">
+    <div class="flex flex-col justify-center ">
 
       <div class="bg-gray-300 p-10 rounded shadow-xl" v-if="alreadyVoted">
         <h1>Arrete de forcer t'as déjà voté</h1>
