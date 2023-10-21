@@ -34,11 +34,11 @@
       </div>
 
 
-      <div class="fixed z-50 top-0 left-0 bg-[#22272E] w-full h-full flex items-center justify-center"
-        v-if="showPopup">
+      <div class="fixed z-50 top-0 left-0 bg-[#22272E] w-full h-full flex items-center justify-center" v-if="showPopup">
         <div class="">
           <div class="align-middle">
-            <div class="w-4/5 m-auto p-2 border-[#444C56] border-solid border-2 rounded shadow-md transition-all opacity-100">
+            <div
+              class="w-4/5 m-auto p-2 border-[#444C56] border-solid border-2 rounded shadow-md transition-all opacity-100">
 
 
               <div class="m-2">
@@ -79,6 +79,11 @@
 
         <button class="m-2 bg-[#373E47] hover:bg-[#444C56] text-white font-bold py-2 px-4 rounded" @click="confirmDate">
           confirmer
+        </button>
+
+        <button v-if="checkDateIsToday" class="m-2 bg-[#373E47] hover:bg-[#444C56] text-white font-bold py-2 px-4 rounded"
+          @click="modifyVote">
+          modifier
         </button>
 
         <button class="m-2 bg-[#373E47] hover:bg-[#444C56] text-white font-bold py-2 px-4 rounded" @click="backFromVotes">
@@ -194,6 +199,8 @@ export default {
     const sim = ref(1)
     const nic = ref(1)
 
+    console.log(est.value);
+
     const items = ref([
       { number: 1, name: "one" },
       { number: 2, name: "two" },
@@ -227,19 +234,94 @@ export default {
       "Nicolas": 0
     })
 
+    function checkDateIsToday() {
+
+      return (dateToincrement(new Date(confirmedDate.value)) == day.value)
+    }
+
     function dateToincrement(date) {
       return date.getDate() - startingDay.value + (month.value - startingMonth.value) * 31;
     }
 
     function formatDate(date) {
       const offset = date.getTimezoneOffset()
-      date = new Date(date.getTime() - (offset*60*1000))
+      date = new Date(date.getTime() - (offset * 60 * 1000))
       return date.toISOString().split('T')[0]
     }
 
     function back() {
       connectedUser.value = "";
       step2.value = false;
+    }
+
+    async function modifyVote() {
+
+      showErrorNoData.value = false;
+
+      const userRef = doc(db, "users", connectedUser.value);
+      const userSnap = await getDoc(userRef);
+
+      if (userSnap.exists() & "voted" + day.value in userSnap.data() & userSnap.data()["voted"+day.value] == true) {
+        showMyVotePage.value = true;
+
+        myVotes.value = userSnap.data()["vote" + day.value];
+
+        for (let user in myVotes.value) {
+
+          const userRef = doc(db, "users", user);
+          const userSnap = await getDoc(userRef);
+
+          if (userSnap.exists() & "rank" + day.value in userSnap.data()) {
+
+            const data = {};
+            data[dayRank.value] = userSnap.data()["rank" + day.value] - myVotes.value[user]
+
+            await updateDoc(userRef, data);
+
+          }
+
+        }
+
+        const userRef = doc(db, "users", connectedUser.value);
+        const dataVote = {};
+        dataVote["voted" + day.value] = false;
+        dataVote["vote" + day.value] = [];
+
+        await updateDoc(userRef, dataVote);
+
+
+        showMyVotePage.value = false;
+        step2.value = true;
+
+        if (myVotes.value["Theo"] & myVotes.value["Theo"] != 0) {
+          the.value = myVotes.value["Theo"]
+        }
+        if (myVotes.value["Thomas"] & myVotes.value["Thomas"] != 0) {
+          tho.value = myVotes.value["Thomas"]
+        }
+        if (myVotes.value["Paul"] & myVotes.value["Paul"] != 0) {
+          pau.value = myVotes.value["Paul"]
+        }
+        if (myVotes.value["Vincent"] & myVotes.value["Vincent"] != 0) {
+          vin.value = myVotes.value["Vincent"]
+        }
+        if (myVotes.value["Labous"] & myVotes.value["Labous"] != 0) {
+          lab.value = myVotes.value["Labous"]
+        }
+        if (myVotes.value["Nicolas"] & myVotes.value["Nicolas"] != 0) {
+          nic.value = myVotes.value["Nicolas"]
+        }
+        if (myVotes.value["Simon"] & myVotes.value["Simon"] != 0) {
+          sim.value = myVotes.value["Simon"]
+        }
+        if (myVotes.value["Estevan"] & myVotes.value["Estevan"] != 0) {
+          est.value = myVotes.value["Estevan"]
+        }
+
+      } else {
+        showErrorNoData.value = true;
+      }
+
     }
 
     async function seeVotes() {
@@ -299,7 +381,7 @@ export default {
         if (userSnap.exists() & "rank" + day.value in userSnap.data()) {
 
           const data = {};
-          data[dayRank.value] = users.value[user] + userSnap.data().rank
+          data[dayRank.value] = users.value[user] + userSnap.data()["rank" + day.value]
 
           await updateDoc(userRef, data)
 
@@ -322,6 +404,7 @@ export default {
       const userRef = doc(db, "users", connectedUser.value);
       const dataVote = {};
       dataVote["vote" + day.value] = users.value;
+      dataVote["voted" + day.value] = true;
 
       await updateDoc(userRef, dataVote)
     }
@@ -332,7 +415,7 @@ export default {
         const userRef = doc(db, "users", connectedUser.value);
         const userSnap = await getDoc(userRef);
 
-        if (userSnap.exists() & "voted" in userSnap.data() & userSnap.data().voted == true) {
+        if (userSnap.exists() & "voted" + day.value in userSnap.data() & userSnap.data()["voted" + day.value] == true) {
           alreadyVoted.value = true;
         } else {
           step2.value = true;
@@ -373,7 +456,7 @@ export default {
           userResult.value[doc.id] = doc.data()["rank" + day.value];
         }
 
-        if ("voted" in doc.data() & doc.data().voted == true) {
+        if ("voted"+day.value in doc.data() & doc.data()["voted"+day.value] == true) {
           count += 1;
         }
       });
@@ -441,7 +524,9 @@ export default {
       selectedDate,
       confirmedDate,
       confirmDate,
-      showErrorNoData
+      showErrorNoData,
+      checkDateIsToday,
+      modifyVote
     }
   }
 }
